@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Card Flip Scout</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f3; --bg3: #efefec;
+    --text: #1a1a18; --text2: #6b6b68; --text3: #9b9b98;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --green-bg: #EAF3DE; --green-text: #27500A;
+    --amber-bg: #FAEEDA; --amber-text: #633806;
+    --red-bg: #FCEBEB; --red-text: #791F1F;
+    --blue-bg: #E6F1FB; --blue-text: #0C447C;
+    --teal: #1D9E75; --teal-bg: #E1F5EE; --teal-text: #0F6E56;
+    --radius: 8px; --radius-lg: 12px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); font-size: 14px; line-height: 1.5; min-height: 100vh; }
+
+  /* API key banner */
+  #api-banner { background: #fff3cd; border-bottom: 1px solid #ffc107; padding: 10px 20px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  #api-banner input { flex: 1; max-width: 360px; padding: 5px 10px; border: 1px solid var(--border2); border-radius: var(--radius); font-size: 13px; font-family: monospace; }
+  #api-banner button { padding: 5px 14px; border: 1px solid var(--border2); border-radius: var(--radius); background: var(--bg); cursor: pointer; font-size: 13px; }
+  #api-banner button:hover { background: var(--bg2); }
+  #api-banner.hidden { display: none; }
+  #key-status { font-size: 12px; color: var(--green-text); }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 1.25rem; }
+
+  /* Tabs */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; gap: 0; }
+  .tab { font-size: 14px; padding: 8px 18px; border: none; background: none; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.active { color: var(--text); font-weight: 600; border-bottom-color: var(--text); }
+  .panel { display: none; } .panel.active { display: block; }
+
+  /* Controls */
+  .row { display: flex; gap: 8px; margin-bottom: 1rem; align-items: flex-end; flex-wrap: wrap; }
+  .row input[type=text] { flex: 1; min-width: 200px; }
+  .field label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-bottom: 1.25rem; }
+  input[type=text], input[type=number], input[type=password] {
+    padding: 7px 10px; border: 1px solid var(--border2); border-radius: var(--radius);
+    font-size: 13px; background: var(--bg); color: var(--text); width: 100%;
+    transition: border-color 0.15s;
+  }
+  input:focus { outline: none; border-color: #888; }
+  button {
+    padding: 7px 16px; border: 1px solid var(--border2); border-radius: var(--radius);
+    background: var(--bg); color: var(--text); cursor: pointer; font-size: 13px;
+    transition: background 0.12s;
+  }
+  button:hover { background: var(--bg2); }
+  button:active { transform: scale(0.98); }
+  button.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  button.primary:hover { background: #333; }
+
+  /* Sport pills */
+  .sport-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .sp { font-size: 12px; padding: 4px 12px; border-radius: 20px; }
+  .sp.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  /* Summary stats */
+  .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; margin-bottom: 1.25rem; }
+  .stat { background: var(--bg2); border-radius: var(--radius); padding: 0.75rem 1rem; }
+  .stat-label { font-size: 11px; color: var(--text2); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .stat-val { font-size: 22px; font-weight: 600; }
+
+  /* Table */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg); }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+  thead th { text-align: left; padding: 8px 10px; font-size: 11px; font-weight: 600; color: var(--text2); background: var(--bg2); border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; text-transform: uppercase; letter-spacing: 0.03em; }
+  thead th:hover { color: var(--text); }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg2); }
+  td { padding: 8px 10px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Pills */
+  .pill { display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
+  .pill-green { background: var(--green-bg); color: var(--green-text); }
+  .pill-amber { background: var(--amber-bg); color: var(--amber-text); }
+  .pill-red { background: var(--red-bg); color: var(--red-text); }
+  .pill-blue { background: var(--blue-bg); color: var(--blue-text); }
+
+  /* Links */
+  .lnk { font-size: 11px; color: var(--blue-text); text-decoration: none; padding: 2px 7px; border: 1px solid #b5d4f4; border-radius: 4px; white-space: nowrap; display: inline-block; }
+  .lnk:hover { background: var(--blue-bg); }
+  .lnk-gray { color: var(--text2); border-color: var(--border2); }
+  .lnk-gray:hover { background: var(--bg2); }
+  .icon-btn { font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+  .verify-btn { font-size: 11px; padding: 2px 8px; border: 1px solid var(--teal); border-radius: 4px; background: none; cursor: pointer; color: var(--teal-text); }
+  .verify-btn:hover { background: var(--teal-bg); }
+
+  /* Gem bar */
+  .gem-bar { display: flex; align-items: center; gap: 5px; }
+  .gem-track { width: 38px; height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+  .gem-fill { height: 100%; border-radius: 3px; background: var(--teal); }
+
+  /* Watchlist */
+  .wl-section-head { font-size: 11px; font-weight: 600; color: var(--text2); padding: 6px 10px; background: var(--bg2); border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.04em; }
+  .edit-price { width: 60px; font-size: 12px; padding: 2px 5px; }
+  .fresh { color: var(--green-text); font-weight: 600; }
+  .stale { color: var(--red-text); font-weight: 600; }
+  .unverified { color: var(--text3); }
+
+  /* States */
+  .empty { text-align: center; padding: 3rem 1rem; color: var(--text2); }
+  .loading { text-align: center; padding: 2rem; color: var(--text2); }
+  .loading::after { content: ''; display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--text); border-radius: 50%; animation: spin 0.7s linear infinite; margin-left: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .err { background: var(--red-bg); border-radius: var(--radius); padding: 0.75rem 1rem; color: var(--red-text); font-size: 13px; margin-bottom: 1rem; border: 1px solid #f09595; }
+  .hint { font-size: 11px; color: var(--text3); margin-top: 1rem; line-height: 1.6; }
+
+  .links-cell { display: flex; gap: 3px; flex-wrap: wrap; padding: 6px 6px; }
+</style>
+</head>
+<body>
+
+<div id="api-banner">
+  <span>Anthropic API key:</span>
+  <input type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+  <button onclick="saveKey()">Save</button>
+  <span id="key-status"></span>
+  <span style="color:var(--text2);font-size:12px;margin-left:auto">Get a free key at <a href="https://console.anthropic.com" target="_blank" style="color:inherit">console.anthropic.com</a></span>
+</div>
+
+<div class="container">
+  <h1>Card Flip Scout</h1>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('discover')">Set discovery</button>
+    <button class="tab" onclick="showTab('hotlist')">Daily hotlist</button>
+    <button class="tab" onclick="showTab('watchlist')">Watchlist (<span id="wCount">0</span>)</button>
+  </div>
+
+  <!-- DISCOVER -->
+  <div id="panel-discover" class="panel active">
+    <div class="row">
+      <div class="field" style="flex:1">
+        <label>Set name</label>
+        <input type="text" id="setInput" placeholder="e.g. 2024 Panini Select Football, 2025 Topps Series 1 Baseball, 2023 Panini Prizm Monopoly NBA" />
+      </div>
+      <button class="primary" onclick="scanSet()">Scan set</button>
+    </div>
+    <div class="filters">
+      <div class="field"><label>Max raw ($)</label><input type="number" id="d_maxRaw" value="40" /></div>
+      <div class="field"><label>Min multiplier</label><input type="number" id="d_minMult" value="3" step="0.5" /></div>
+      <div class="field"><label>Min gem rate %</label><input type="number" id="d_minGem" value="30" /></div>
+      <div class="field"><label>Min flip score</label><input type="number" id="d_minScore" value="50" /></div>
+    </div>
+    <div id="d_err" class="err" style="display:none"></div>
+    <div id="d_summary" class="summary-row" style="display:none">
+      <div class="stat"><div class="stat-label">Cards found</div><div class="stat-val" id="d_sTotal">0</div></div>
+      <div class="stat"><div class="stat-label">Pass filters</div><div class="stat-val" id="d_sPass">0</div></div>
+      <div class="stat"><div class="stat-label">Avg mult</div><div class="stat-val" id="d_sMult">-</div></div>
+      <div class="stat"><div class="stat-label">Top score</div><div class="stat-val" id="d_sTop">-</div></div>
+    </div>
+    <div id="d_results"><div class="empty">Enter a set name above — Claude will surface every card worth grading, ranked by flip potential.</div></div>
+    <p class="hint">Prices are AI estimates based on market knowledge. Always verify on eBay sold comps and GemRate before buying. Grading cost assumed $25.</p>
+  </div>
+
+  <!-- HOTLIST -->
+  <div id="panel-hotlist" class="panel">
+    <div class="sport-pills">
+      <button class="sp on" onclick="toggleSport(this,'All')">All sports</button>
+      <button class="sp" onclick="toggleSport(this,'Football')">Football</button>
+      <button class="sp" onclick="toggleSport(this,'Baseball')">Baseball</button>
+      <button class="sp" onclick="toggleSport(this,'Basketball')">Basketball</button>
+      <button class="sp" onclick="toggleSport(this,'Hockey')">Hockey</button>
+      <button class="sp" onclick="toggleSport(this,'Soccer')">Soccer</button>
+      <button class="sp" onclick="toggleSport(this,'Pokemon')">Pokemon</button>
+    </div>
+    <div class="filters">
+      <div class="field"><label>Max raw ($)</label><input type="number" id="h_maxRaw" value="40" /></div>
+      <div class="field"><label>Min multiplier</label><input type="number" id="h_minMult" value="3" step="0.5" /></div>
+      <div class="field"><label>Min gem rate %</label><input type="number" id="h_minGem" value="30" /></div>
+      <div class="field"><label>Min flip score</label><input type="number" id="h_minScore" value="55" /></div>
+    </div>
+    <div style="margin-bottom:1rem">
+      <button class="primary" onclick="genHotlist()">Generate hotlist</button>
+    </div>
+    <div id="h_err" class="err" style="display:none"></div>
+    <div id="h_results"><div class="empty">Hit "Generate hotlist" to surface today's top grading flip opportunities across all sports.</div></div>
+    <p class="hint">Prices are AI estimates. Always verify on eBay and GemRate before buying.</p>
+  </div>
+
+  <!-- WATCHLIST -->
+  <div id="panel-watchlist" class="panel">
+    <div id="wl_empty" class="empty">No cards yet. Add them from the discovery or hotlist tabs.</div>
+    <div id="wl_table" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:8px">
+        <span style="font-size:12px;color:var(--text2)">Enter your verified prices from eBay, then click Verify ✓. <span style="color:var(--green-text);font-weight:600">Green</span> = checked &lt;3 days. <span style="color:var(--red-text);font-weight:600">Red</span> = &gt;7 days old.</span>
+        <div style="display:flex;gap:6px">
+          <button onclick="showTab('discover')">+ Add cards</button>
+          <button onclick="clearWatchlist()">Clear all</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:22%">Card</th>
+            <th style="width:8%">AI raw</th>
+            <th style="width:9%">My raw $</th>
+            <th style="width:8%">AI PSA10</th>
+            <th style="width:9%">My PSA10 $</th>
+            <th style="width:7%">Gem</th>
+            <th style="width:9%">Score</th>
+            <th style="width:10%">Verified</th>
+            <th style="width:18%">Actions</th>
+          </tr></thead>
+          <tbody id="wl_body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GRAD = 25;
+let apiKey = localStorage.getItem('cfs_key') || '';
+let watchlist = JSON.parse(localStorage.getItem('cfs_wl') || '[]');
+let discoverResults = [], hotlistResults = [];
+let hotSport = 'All';
+let dSort = {col:'score',asc:false}, hSort = {col:'score',asc:false};
+
+// Init key display
+if (apiKey) {
+  document.getElementById('api-banner').classList.add('hidden');
+} else {
+  document.getElementById('key-status').textContent = '';
+}
+
+function saveKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k.startsWith('sk-ant-')) { alert('Key should start with sk-ant-'); return; }
+  apiKey = k;
+  localStorage.setItem('cfs_key', k);
+  document.getElementById('api-banner').classList.add('hidden');
+}
+
+function showTab(t) {
+  ['discover','hotlist','watchlist'].forEach((n,i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n===t);
+    document.getElementById('panel-'+n).classList.toggle('active', n===t);
+  });
+  if (t==='watchlist') renderWatchlist();
+}
+
+function toggleSport(el, s) {
+  document.querySelectorAll('.sp').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  hotSport = s;
+}
+
+function calcScore(raw, p10, p9, gem, vol) {
+  if (!raw || !p10 || raw<=0) return 0;
+  const profit10 = p10-raw-GRAD, profit9 = (p9||0)-raw-GRAD;
+  const ev = (gem/100)*profit10 + Math.min((100-gem)/100*0.6,0.4)*profit9;
+  let s = Math.min((p10/raw)*9,35) + Math.min(gem*0.45,22) + Math.min((ev/(raw+GRAD))*25,25) + Math.min((vol||3)*1.5,18);
+  return Math.round(Math.min(s,100));
+}
+
+function pClass(s) { return s>=70?'pill-green':s>=48?'pill-amber':'pill-red'; }
+function ebayURL(q,grade) { return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(grade?`PSA ${grade} ${q}`:q)}&LH_Sold=1&LH_Complete=1`; }
+function grURL(q) { return `https://www.gemrate.com/universal-search?q=${encodeURIComponent(q)}`; }
+function verClass(d) { if(!d) return 'unverified'; const days=(Date.now()-new Date(d))/86400000; return days<=3?'fresh':days>=7?'stale':''; }
+function verLabel(d) { if(!d) return 'Never'; const days=Math.floor((Date.now()-new Date(d))/86400000); return days===0?'Today':days===1?'Yesterday':`${days}d ago`; }
+
+function discRow(c) {
+  const mult=(c.psa10/c.rawPrice).toFixed(2);
+  const profit=Math.round(c.psa10-c.rawPrice-GRAD);
+  const inW=watchlist.find(w=>w.id===c.id);
+  const wb=inW
+    ?`<button class="icon-btn" disabled style="color:var(--teal-text);border-color:var(--teal)">Watching</button>`
+    :`<button class="icon-btn" onclick="addWatchFrom('d','${c.id}')">+ Watch</button>`;
+  return `<tr>
+    <td title="${c.name} — ${c.set}"><b style="font-weight:600">${c.name}</b><br><span style="font-size:11px;color:var(--text2)">${c.set}</span></td>
+    <td>$${c.rawPrice.toFixed(0)}</td>
+    <td style="font-weight:600">$${c.psa10.toFixed(0)}</td>
+    <td>$${(c.psa9||0).toFixed(0)}</td>
+    <td>${mult}x</td>
+    <td><div class="gem-bar"><div class="gem-track"><div class="gem-fill" style="width:${Math.min(c.gemRate,100)}%"></div></div>${c.gemRate}%</div></td>
+    <td style="color:${profit>0?'#27500A':'#791F1F'}">$${profit} <span class="pill ${pClass(c.score)}">${c.score}</span></td>
+    <td class="links-cell">
+      <a class="lnk" href="${ebayURL(c.name+' '+c.set,null)}" target="_blank">Raw</a>
+      <a class="lnk" href="${ebayURL(c.name+' '+c.set,10)}" target="_blank">PSA10</a>
+      <a class="lnk lnk-gray" href="${grURL(c.name)}" target="_blank">GR</a>
+      ${wb}
+    </td>
+  </tr>`;
+}
+
+function wlRow(c, idx) {
+  const dispRaw=c.myRaw!=null?c.myRaw:c.rawPrice;
+  const dispP10=c.myPsa10!=null?c.myPsa10:c.psa10;
+  const profit=Math.round(dispP10-dispRaw-GRAD);
+  const vc=verClass(c.verifiedAt);
+  return `<tr>
+    <td title="${c.name} — ${c.set}"><b style="font-weight:600">${c.name}</b><br><span style="font-size:11px;color:var(--text2)">${c.set}</span></td>
+    <td style="color:var(--text2)">$${c.rawPrice.toFixed(0)}</td>
+    <td><input class="edit-price" type="number" placeholder="${c.rawPrice.toFixed(0)}" value="${c.myRaw!=null?c.myRaw:''}" onchange="updateP(${idx},'myRaw',this.value)" /></td>
+    <td style="color:var(--text2)">$${c.psa10.toFixed(0)}</td>
+    <td><input class="edit-price" type="number" placeholder="${c.psa10.toFixed(0)}" value="${c.myPsa10!=null?c.myPsa10:''}" onchange="updateP(${idx},'myPsa10',this.value)" /></td>
+    <td><div class="gem-bar"><div class="gem-track"><div class="gem-fill" style="width:${Math.min(c.gemRate,100)}%"></div></div>${c.gemRate}%</div></td>
+    <td style="color:${profit>0?'#27500A':'#791F1F'}">$${profit} <span class="pill ${pClass(c.score)}">${c.score}</span></td>
+    <td><span class="${vc}" style="font-size:12px">${verLabel(c.verifiedAt)}</span></td>
+    <td class="links-cell">
+      <button class="verify-btn" onclick="markVerified(${idx})">Verify ✓</button>
+      <a class="lnk" href="${ebayURL(c.name+' '+c.set,null)}" target="_blank">Raw</a>
+      <a class="lnk" href="${ebayURL(c.name+' '+c.set,10)}" target="_blank">PSA10</a>
+      <button class="icon-btn" onclick="removeWatch(${idx})" style="color:#A32D2D">✕</button>
+    </td>
+  </tr>`;
+}
+
+function addWatchFrom(tab, id) {
+  const src = tab==='d' ? discoverResults : hotlistResults;
+  const c = src.find(x=>x.id===id);
+  if (c && !watchlist.find(w=>w.id===c.id)) {
+    watchlist.push({...c, verifiedAt:null, myRaw:null, myPsa10:null});
+    saveWL();
+  }
+  if (tab==='d') renderDisc(discoverResults); else renderHot(hotlistResults);
+}
+
+function markVerified(idx) { watchlist[idx].verifiedAt=new Date().toISOString(); saveWL(); renderWatchlist(); }
+function removeWatch(idx) { watchlist.splice(idx,1); saveWL(); renderWatchlist(); }
+function clearWatchlist() { if(!confirm('Clear all watchlist cards?')) return; watchlist=[]; saveWL(); renderWatchlist(); }
+
+function updateP(idx, field, val) {
+  const n=parseFloat(val);
+  watchlist[idx][field]=(!isNaN(n)&&n>0)?n:null;
+  const r=watchlist[idx].myRaw!=null?watchlist[idx].myRaw:watchlist[idx].rawPrice;
+  const p=watchlist[idx].myPsa10!=null?watchlist[idx].myPsa10:watchlist[idx].psa10;
+  watchlist[idx].score=calcScore(r,p,watchlist[idx].psa9,watchlist[idx].gemRate,watchlist[idx].salesVol30);
+  saveWL();
+}
+
+function saveWL() { localStorage.setItem('cfs_wl',JSON.stringify(watchlist)); document.getElementById('wCount').textContent=watchlist.length; }
+
+function renderWatchlist() {
+  document.getElementById('wCount').textContent=watchlist.length;
+  if (!watchlist.length) { document.getElementById('wl_empty').style.display='block'; document.getElementById('wl_table').style.display='none'; return; }
+  document.getElementById('wl_empty').style.display='none'; document.getElementById('wl_table').style.display='block';
+  const needsV=watchlist.filter(c=>!c.verifiedAt||verClass(c.verifiedAt)==='stale');
+  const ok=watchlist.filter(c=>c.verifiedAt&&verClass(c.verifiedAt)!=='stale');
+  let html='';
+  if (needsV.length) { html+=`<tr><td colspan="9" class="wl-section-head">Needs verification (${needsV.length})</td></tr>`; needsV.forEach(c=>{ html+=wlRow(c,watchlist.indexOf(c)); }); }
+  if (ok.length) { html+=`<tr><td colspan="9" class="wl-section-head">Recently verified (${ok.length})</td></tr>`; ok.forEach(c=>{ html+=wlRow(c,watchlist.indexOf(c)); }); }
+  document.getElementById('wl_body').innerHTML=html;
+}
+
+function applyFilt(arr, ids) {
+  const [mr,mm,mg,ms]=[ids[0],ids[1],ids[2],ids[3]].map(id=>parseFloat(document.getElementById(id).value)||0);
+  return arr.filter(c=>c.rawPrice<=(mr||999)&&(c.psa10/c.rawPrice)>=(mm||0)&&c.gemRate>=(mg||0)&&c.score>=(ms||0));
+}
+
+function sortArr(arr, s) {
+  return [...arr].sort((a,b)=>{ let va=s.col==='mult'?a.psa10/a.rawPrice:a[s.col], vb=s.col==='mult'?b.psa10/b.rawPrice:b[s.col]; return s.asc?va-vb:vb-va; });
+}
+
+function thSort(col,label,sortState,fn) {
+  const arr=col===sortState.col?(sortState.asc?' ↑':' ↓'):'';
+  return `<th onclick="${fn}('${col}')">${label}${arr}</th>`;
+}
+
+function renderDisc(all) {
+  const filtered=sortArr(applyFilt(all,['d_maxRaw','d_minMult','d_minGem','d_minScore']),dSort);
+  const avgM=all.length?(all.reduce((s,c)=>s+c.psa10/c.rawPrice,0)/all.length).toFixed(1)+'x':'-';
+  document.getElementById('d_sTotal').textContent=all.length;
+  document.getElementById('d_sPass').textContent=filtered.length;
+  document.getElementById('d_sMult').textContent=avgM;
+  document.getElementById('d_sTop').textContent=all.length?Math.max(...all.map(c=>c.score)):'-';
+  document.getElementById('d_summary').style.display='grid';
+  if (!filtered.length) { document.getElementById('d_results').innerHTML='<div class="empty">No cards match your filters. Try loosening them.</div>'; return; }
+  document.getElementById('d_results').innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr><th style="width:24%">Card</th>${thSort('rawPrice','Raw',dSort,'dSortBy')}${thSort('psa10','PSA 10',dSort,'dSortBy')}<th>PSA 9</th>${thSort('mult','Mult',dSort,'dSortBy')}${thSort('gemRate','Gem %',dSort,'dSortBy')}${thSort('score','Profit / score',dSort,'dSortBy')}<th>Links</th></tr></thead>
+    <tbody>${filtered.map(c=>discRow(c)).join('')}</tbody></table></div>`;
+}
+
+function renderHot(all) {
+  const filtered=sortArr(applyFilt(all,['h_maxRaw','h_minMult','h_minGem','h_minScore']),hSort);
+  if (!filtered.length) { document.getElementById('h_results').innerHTML='<div class="empty">No cards match your filters.</div>'; return; }
+  document.getElementById('h_results').innerHTML=`<div class="tbl-wrap"><table>
+    <thead><tr><th style="width:24%">Card</th>${thSort('rawPrice','Raw',hSort,'hSortBy')}${thSort('psa10','PSA 10',hSort,'hSortBy')}<th>PSA 9</th>${thSort('mult','Mult',hSort,'hSortBy')}${thSort('gemRate','Gem %',hSort,'hSortBy')}${thSort('score','Profit / score',hSort,'hSortBy')}<th>Links</th></tr></thead>
+    <tbody>${filtered.map(c=>discRow(c)).join('')}</tbody></table></div>`;
+}
+
+function dSortBy(col) { if(dSort.col===col) dSort.asc=!dSort.asc; else {dSort.col=col;dSort.asc=false;} renderDisc(discoverResults); }
+function hSortBy(col) { if(hSort.col===col) hSort.asc=!hSort.asc; else {hSort.col=col;hSort.asc=false;} renderHot(hotlistResults); }
+
+['d_maxRaw','d_minMult','d_minGem','d_minScore'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{if(discoverResults.length)renderDisc(discoverResults);}));
+['h_maxRaw','h_minMult','h_minGem','h_minScore'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{if(hotlistResults.length)renderHot(hotlistResults);}));
+document.getElementById('setInput').addEventListener('keydown',e=>{if(e.key==='Enter')scanSet();});
+
+async function callClaude(prompt) {
+  if (!apiKey) { alert('Please enter your Anthropic API key at the top of the page.'); throw new Error('No API key'); }
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-iab':'true'},
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+  });
+  const data=await resp.json();
+  if (!resp.ok) throw new Error(data.error?.message||`API error ${resp.status}`);
+  const text=data.content.map(b=>b.text||'').join('');
+  return JSON.parse(text.replace(/```json|```/g,'').trim());
+}
+
+async function scanSet() {
+  const setName=document.getElementById('setInput').value.trim();
+  if (!setName) { document.getElementById('setInput').focus(); return; }
+  document.getElementById('d_err').style.display='none';
+  document.getElementById('d_summary').style.display='none';
+  document.getElementById('d_results').innerHTML='<div class="loading">Scanning set — identifying flip candidates</div>';
+  const prompt=`You are a sports card grading flip expert. Analyze the set: "${setName}".
+
+Return a JSON array of 15-25 cards worth buying raw and grading (PSA). Include parallels, numbered variants, rookie cards, and key players.
+
+Each object must have exactly these fields:
+{"id":"unique_slug_no_spaces","name":"Player name","set":"Parallel or variant name","sport":"Sport","rawPrice":14.50,"psa10":95.00,"psa9":48.00,"gemRate":52,"salesVol30":7,"notes":"Why this is a flip candidate"}
+
+Rules: rawPrice = realistic current eBay raw sold price. psa10/psa9 = realistic graded eBay sold prices. gemRate = estimated % chance PSA 10 (0-100). Be realistic with prices. Return ONLY a valid JSON array, no other text, no markdown.`;
+  try {
+    const cards=await callClaude(prompt);
+    discoverResults=cards.map(c=>({...c,score:calcScore(c.rawPrice,c.psa10,c.psa9,c.gemRate,c.salesVol30)}));
+    dSort={col:'score',asc:false};
+    renderDisc(discoverResults);
+  } catch(err) {
+    document.getElementById('d_err').textContent='Error: '+err.message;
+    document.getElementById('d_err').style.display='block';
+    document.getElementById('d_results').innerHTML='<div class="empty">Something went wrong. Check your API key and try again.</div>';
+  }
+}
+
+async function genHotlist() {
+  document.getElementById('h_err').style.display='none';
+  document.getElementById('h_results').innerHTML='<div class="loading">Generating hotlist</div>';
+  const sf=hotSport==='All'?'Football, Baseball, Basketball, Hockey, Soccer, and Pokemon':hotSport;
+  const mr=document.getElementById('h_maxRaw').value||40;
+  const prompt=`You are a sports card grading flip expert. Generate the TOP 20 best cards to buy raw and grade right now across ${sf}. Max raw price ~$${mr}.
+
+Focus on current rookies, trending players, undervalued parallels, and cards with strong gem rates.
+
+Each object must have exactly these fields:
+{"id":"unique_slug_no_spaces","name":"Player name","set":"Year Brand Set Parallel","sport":"Sport","rawPrice":18.00,"psa10":120.00,"psa9":55.00,"gemRate":58,"salesVol30":9,"notes":"Why hot right now"}
+
+Be specific — exact year, brand, parallel. Realistic prices. Return ONLY a valid JSON array, no markdown.`;
+  try {
+    const cards=await callClaude(prompt);
+    hotlistResults=cards.map(c=>({...c,score:calcScore(c.rawPrice,c.psa10,c.psa9,c.gemRate,c.salesVol30)}));
+    hSort={col:'score',asc:false};
+    renderHot(hotlistResults);
+  } catch(err) {
+    document.getElementById('h_err').textContent='Error: '+err.message;
+    document.getElementById('h_err').style.display='block';
+    document.getElementById('h_results').innerHTML='<div class="empty">Something went wrong. Check your API key and try again.</div>';
+  }
+}
+
+document.getElementById('wCount').textContent=watchlist.length;
+</script>
+</body>
+</html>
