@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Card Flip Scout</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--bg2:#f5f5f3;--bg3:#efefec;
+  --text:#1a1a18;--text2:#6b6b68;--text3:#9b9b98;
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+  --green-bg:#EAF3DE;--green-text:#27500A;
+  --amber-bg:#FAEEDA;--amber-text:#633806;
+  --red-bg:#FCEBEB;--red-text:#791F1F;
+  --blue-bg:#E6F1FB;--blue-text:#0C447C;
+  --teal:#1D9E75;--teal-bg:#E1F5EE;--teal-text:#0F6E56;
+  --radius:8px;--radius-lg:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+
+/* API Banner */
+#api-banner{background:#fff8e1;border-bottom:1px solid #ffc107;padding:10px 20px;display:flex;align-items:center;gap:10px;font-size:13px;flex-wrap:wrap}
+#api-banner input{width:300px;padding:5px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;font-family:monospace}
+#api-banner.hidden{display:none}
+
+.container{max-width:1100px;margin:0 auto;padding:1.25rem 1rem 3rem}
+h1{font-size:20px;font-weight:700;margin-bottom:0.25rem}
+.subtitle{font-size:13px;color:var(--text2);margin-bottom:1.25rem}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
+.tab{font-size:14px;padding:8px 18px;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--text);font-weight:600;border-bottom-color:var(--text)}
+.panel{display:none}.panel.active{display:block}
+
+/* Inputs */
+.field label{display:block;font-size:11px;color:var(--text2);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.03em;font-weight:600}
+input[type=text],input[type=number],input[type=password]{padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;background:var(--bg);color:var(--text);width:100%;transition:border-color 0.15s}
+input:focus{outline:none;border-color:#666}
+button{padding:7px 16px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);cursor:pointer;font-size:13px;transition:background 0.12s}
+button:hover{background:var(--bg2)}
+button.primary{background:var(--text);color:var(--bg);border-color:var(--text)}
+button.primary:hover{background:#333}
+
+.row{display:flex;gap:8px;margin-bottom:1rem;align-items:flex-end;flex-wrap:wrap}
+.row input[type=text]{flex:1;min-width:200px}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:1.25rem}
+.range-row{display:flex;gap:5px;align-items:center}
+.range-row input[type=number]{width:56px}
+.range-row span{font-size:12px;color:var(--text2)}
+
+/* Sport pills */
+.sport-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.sp{font-size:12px;padding:4px 12px;border:1px solid var(--border2);border-radius:20px;background:none;cursor:pointer;color:var(--text2)}
+.sp.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+
+/* Summary stats */
+.summary-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:1.25rem}
+.stat{background:var(--bg2);border-radius:var(--radius);padding:0.75rem 1rem}
+.stat-label{font-size:11px;color:var(--text2);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.03em}
+.stat-val{font-size:22px;font-weight:700}
+
+/* Hint box */
+.hint{font-size:12px;color:var(--text2);margin-top:1rem;line-height:1.6;padding:0.75rem 1rem;background:var(--bg2);border-radius:var(--radius);border-left:3px solid var(--border2)}
+
+/* Watchlist */
+.wl-outer{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;background:var(--bg)}
+.wl-row{display:grid;grid-template-columns:1.4fr repeat(6,auto);gap:6px;padding:10px 12px;border-bottom:1px solid var(--border);align-items:start;font-size:13px}
+.wl-row:last-child{border-bottom:none}
+.wl-head{background:var(--bg2);font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.04em;align-items:center;padding:7px 12px}
+.shead{font-size:11px;font-weight:600;color:var(--text2);padding:6px 12px;background:var(--bg2);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:0.03em}
+
+/* Badges */
+.risk{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;white-space:nowrap}
+.risk-low{background:var(--green-bg);color:var(--green-text)}
+.risk-med{background:var(--amber-bg);color:var(--amber-text)}
+.risk-high{background:var(--red-bg);color:var(--red-text)}
+.profit-up{color:var(--green-text);font-weight:600;font-size:12px}
+.profit-break{color:var(--amber-text);font-weight:600;font-size:12px}
+.profit-down{color:var(--red-text);font-weight:600;font-size:12px}
+.sgc-better{background:var(--blue-bg);color:var(--blue-text);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px}
+
+/* Links & buttons */
+.lnk{font-size:11px;color:var(--blue-text);text-decoration:none;padding:2px 6px;border:1px solid #b5d4f4;border-radius:4px;white-space:nowrap;display:inline-block}
+.lnk:hover{background:var(--blue-bg)}
+.rb{font-size:11px;padding:2px 7px;border:1px solid var(--border2);border-radius:4px;background:none;cursor:pointer;color:var(--text2)}
+.rb:hover{background:var(--bg2)}
+.vbtn{font-size:11px;padding:2px 7px;border:1px solid var(--teal);border-radius:4px;background:none;cursor:pointer;color:var(--teal-text)}
+.vbtn:hover{background:var(--teal-bg)}
+.ep{width:56px;font-size:12px;padding:2px 5px;border:1px solid var(--border2);border-radius:4px;background:var(--bg);color:var(--text)}
+
+/* Verified */
+.fresh{color:var(--green-text);font-weight:600;font-size:11px}
+.stale{color:var(--red-text);font-weight:600;font-size:11px}
+.never{color:var(--text3);font-size:11px}
+
+/* States */
+.empty{text-align:center;padding:3rem 1rem;color:var(--text2)}
+.loading{text-align:center;padding:2rem;color:var(--text2)}
+.loading::after{content:'';display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--text);border-radius:50%;animation:spin 0.7s linear infinite;margin-left:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err{background:var(--red-bg);border-radius:var(--radius);padding:0.75rem 1rem;color:var(--red-text);font-size:13px;margin-bottom:1rem;border:1px solid #f09595}
+
+/* Results table */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--bg)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+thead th{text-align:left;padding:8px 10px;font-size:10px;font-weight:700;color:var(--text2);background:var(--bg2);border-bottom:1px solid var(--border);white-space:nowrap;text-transform:uppercase;letter-spacing:0.03em;cursor:pointer;user-select:none}
+thead th:hover{color:var(--text)}
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--bg2)}
+td{padding:8px 10px;vertical-align:middle;white-space:nowrap}
+.pill{display:inline-flex;align-items:center;border-radius:5px;font-size:10px;font-weight:700;padding:2px 7px}
+.pg{background:var(--green-bg);color:var(--green-text)}
+.pa{background:var(--amber-bg);color:var(--amber-text)}
+.pr{background:var(--red-bg);color:var(--red-text)}
+</style>
+</head>
+<body>
+
+<div id="api-banner">
+  <strong>Anthropic API key required:</strong>
+  <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-..." />
+  <button class="primary" onclick="saveKey()">Save key</button>
+  <span style="color:var(--text2);font-size:12px">Free key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue-text)">console.anthropic.com</a> — paste once, saved forever</span>
+</div>
+
+<div class="container">
+  <h1>Card Flip Scout</h1>
+  <p class="subtitle">Discover cards worth grading — ranked by flip potential, downside risk, and best grading path</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('discover')">Set discovery</button>
+    <button class="tab" onclick="showTab('hotlist')">Daily hotlist</button>
+    <button class="tab" onclick="showTab('watchlist')">Watchlist (<span id="wCount">0</span>)</button>
+  </div>
+
+  <!-- DISCOVER -->
+  <div id="panel-discover" class="panel active">
+    <div class="row">
+      <div class="field" style="flex:1">
+        <label>Set name</label>
+        <input type="text" id="setInput" placeholder="e.g. 2024 Panini Select Football, 2025 Topps Series 1 Baseball, 2022 Panini Prizm Basketball" />
+      </div>
+      <button class="primary" onclick="scanSet()">Scan set ↗</button>
+    </div>
+    <div class="filters">
+      <div class="field">
+        <label>Raw price range ($)</label>
+        <div class="range-row">
+          <input type="number" id="d_minr" value="0" min="0" placeholder="Min" />
+          <span>–</span>
+          <input type="number" id="d_maxr" value="40" min="0" placeholder="Max" />
+        </div>
+      </div>
+      <div class="field"><label>Min PSA 10 ($)</label><input type="number" id="d_mp10" value="40" /></div>
+      <div class="field"><label>Min PSA 9 ($)</label><input type="number" id="d_mp9" value="0" placeholder="e.g. 20" /></div>
+      <div class="field"><label>Min mult (x)</label><input type="number" id="d_mm" value="3" step="0.5" /></div>
+      <div class="field"><label>Min gem %</label><input type="number" id="d_mg" value="30" /></div>
+      <div class="field"><label>Min score</label><input type="number" id="d_ms" value="50" /></div>
+    </div>
+    <div id="d_err" class="err" style="display:none"></div>
+    <div id="d_summary" class="summary-row" style="display:none">
+      <div class="stat"><div class="stat-label">Cards found</div><div class="stat-val" id="d_sTotal">0</div></div>
+      <div class="stat"><div class="stat-label">Pass filters</div><div class="stat-val" id="d_sPass">0</div></div>
+      <div class="stat"><div class="stat-label">Low risk</div><div class="stat-val" id="d_sLow">0</div></div>
+      <div class="stat"><div class="stat-label">Top score</div><div class="stat-val" id="d_sTop">-</div></div>
+    </div>
+    <div id="d_results"><div class="empty">Enter a set name and hit Scan — Claude will surface every card worth grading ranked by flip potential, with full upside and downside analysis.</div></div>
+    <p class="hint">💡 <strong>How to read results:</strong> PSA 10 Profit = your upside. PSA 9 Profit = your floor if it doesn't grade perfectly. Risk = Low means you profit even on a 9. Always verify prices on eBay sold comps before buying. Grading costs: PSA $25, SGC $18.</p>
+  </div>
+
+  <!-- HOTLIST -->
+  <div id="panel-hotlist" class="panel">
+    <div class="sport-pills">
+      <button class="sp on" onclick="toggleSport(this,'All')">All sports</button>
+      <button class="sp" onclick="toggleSport(this,'Football')">Football</button>
+      <button class="sp" onclick="toggleSport(this,'Baseball')">Baseball</button>
+      <button class="sp" onclick="toggleSport(this,'Basketball')">Basketball</button>
+      <button class="sp" onclick="toggleSport(this,'Hockey')">Hockey</button>
+      <button class="sp" onclick="toggleSport(this,'Soccer')">Soccer</button>
+      <button class="sp" onclick="toggleSport(this,'Pokemon')">Pokemon</button>
+    </div>
+    <div class="filters">
+      <div class="field">
+        <label>Raw price range ($)</label>
+        <div class="range-row">
+          <input type="number" id="h_minr" value="0" min="0" placeholder="Min" />
+          <span>–</span>
+          <input type="number" id="h_maxr" value="40" min="0" placeholder="Max" />
+        </div>
+      </div>
+      <div class="field"><label>Min PSA 10 ($)</label><input type="number" id="h_mp10" value="40" /></div>
+      <div class="field"><label>Min PSA 9 ($)</label><input type="number" id="h_mp9" value="0" placeholder="e.g. 20" /></div>
+      <div class="field"><label>Min mult (x)</label><input type="number" id="h_mm" value="3" step="0.5" /></div>
+      <div class="field"><label>Min gem %</label><input type="number" id="h_mg" value="30" /></div>
+    </div>
+    <div style="margin-bottom:1rem"><button class="primary" onclick="genHotlist()">Generate hotlist ↗</button></div>
+    <div id="h_err" class="err" style="display:none"></div>
+    <div id="h_results"><div class="empty">Hit "Generate hotlist" to surface today's top grading flip opportunities across all sports, ranked by score with full risk analysis.</div></div>
+    <p class="hint">💡 Hotlist uses AI market knowledge. Prices are estimates — verify on eBay sold comps before buying.</p>
+  </div>
+
+  <!-- WATCHLIST -->
+  <div id="panel-watchlist" class="panel">
+    <div id="wl_empty" class="empty">No cards yet. Add them from Set discovery or Daily hotlist using the "+ Watch" button.</div>
+    <div id="wl_table" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;flex-wrap:wrap;gap:8px">
+        <span style="font-size:12px;color:var(--text2)">
+          Enter your verified eBay prices in "My raw" and "My PSA10". Hit <strong>Verify ✓</strong> after checking.
+          &nbsp;<span class="risk risk-low">Low risk</span> = profit on 9 &amp; 10
+          &nbsp;<span class="risk risk-med">Med risk</span> = near break-even on 9
+          &nbsp;<span class="risk risk-high">High risk</span> = loss on 9
+        </span>
+        <button onclick="clearWatchlist()">Clear all</button>
+      </div>
+      <div class="wl-outer">
+        <div id="wl_body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GRAD_PSA = 25, GRAD_SGC = 18;
+let apiKey = localStorage.getItem('cfs_key2') || '';
+let watchlist = JSON.parse(localStorage.getItem('cfs_wl2') || '[]');
+let discoverResults = [], hotlistResults = [];
+let hotSport = 'All';
+let dSort = {col:'score',asc:false}, hSort = {col:'score',asc:false};
+
+if (apiKey) document.getElementById('api-banner').classList.add('hidden');
+
+function saveKey() {
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if (!k.startsWith('sk-ant-')) { alert('Key should start with sk-ant-'); return; }
+  apiKey = k;
+  localStorage.setItem('cfs_key2', k);
+  document.getElementById('api-banner').classList.add('hidden');
+}
+
+function showTab(t) {
+  ['discover','hotlist','watchlist'].forEach((n,i) => {
+    document.querySelectorAll('.tab')[i].classList.toggle('active', n===t);
+    document.getElementById('panel-'+n).classList.toggle('active', n===t);
+  });
+  if (t==='watchlist') renderWatchlist();
+}
+
+function toggleSport(el, s) {
+  document.querySelectorAll('.sp').forEach(b => b.classList.remove('on'));
+  el.classList.add('on'); hotSport = s;
+}
+
+function calcScore(raw, p10, p9, sgc10, gem, vol) {
+  if (!raw||!p10||raw<=0) return 0;
+  const p10profit = p10-raw-GRAD_PSA;
+  const p9profit  = (p9||0)-raw-GRAD_PSA;
+  const sgcProfit = sgc10?(sgc10-raw-GRAD_SGC):0;
+  const bestProfit = Math.max(p10profit, sgcProfit);
+  const ev = (gem/100)*bestProfit + Math.min((100-gem)/100*0.55,0.4)*Math.max(p9profit,0);
+  let s = Math.min((p10/raw)*9,35) + Math.min(gem*0.4,20) + Math.min((ev/(raw+GRAD_PSA))*22,22);
+  if (p9profit >= 0) s += 15;
+  else if (p9profit >= -10) s += 5;
+  s += Math.min((vol||3)*1.2,8);
+  return Math.round(Math.min(s,100));
+}
+
+function riskClass(p9p) { return p9p>=0?'risk-low':p9p>=-10?'risk-med':'risk-high'; }
+function riskLabel(p9p) { return p9p>=0?'Low risk':p9p>=-10?'Med risk':'High risk'; }
+function profitClass(p) { return p>0?'profit-up':p>=-10?'profit-break':'profit-down'; }
+function pClass(s) { return s>=70?'pg':s>=48?'pa':'pr'; }
+function ebay(q,grade,co) { const g=co?`${co} ${grade} ${q}`:grade?`PSA ${grade} ${q}`:q; return `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(g)}&LH_Sold=1&LH_Complete=1`; }
+function grURL(q) { return `https://www.gemrate.com/universal-search?q=${encodeURIComponent(q)}`; }
+function vClass(d) { if(!d)return'never'; const days=(Date.now()-new Date(d))/86400000; return days<=3?'fresh':days>=7?'stale':''; }
+function vLabel(d) { if(!d)return'Never'; const days=Math.floor((Date.now()-new Date(d))/86400000); return days===0?'Today':days===1?'Yesterday':`${days}d ago`; }
+
+function buildPrompt(set, minr, maxr, mp10, mp9, mm, mg, ms, sportFilter, isHotlist) {
+  const base = isHotlist
+    ? `Generate a hotlist of the top 20 sports cards to buy raw and grade right now across ${sportFilter}.`
+    : `Scan this card set for grading flip opportunities: "${set}"\n\nGive me a ranked table of 15-20 cards worth buying raw and grading to PSA/SGC.`;
+  const cols = `| Rank | Player | ${isHotlist?'Set/Parallel | Sport':'Parallel/Variant'} | Raw $ | PSA 10 $ | PSA 9 $ | SGC 10 $ | PSA 10 Profit | PSA 9 Profit | SGC 10 Profit | Best Path | Gem % | Mult | Risk | Score | Notes |`;
+  const mp9line = parseFloat(mp9)>0 ? `- PSA 9 $ must be at least $${mp9}` : '';
+  return `${base}
+
+Format as a markdown table:
+${cols}
+
+Definitions:
+- Raw $ = realistic current eBay sold price ungraded
+- PSA 10 $ = realistic PSA 10 eBay sold price
+- PSA 9 $ = realistic PSA 9 eBay sold price
+- SGC 10 $ = realistic SGC 10 eBay sold price (typically 60-80% of PSA 10)
+- PSA 10 Profit = PSA 10 $ minus Raw $ minus $25
+- PSA 9 Profit = PSA 9 $ minus Raw $ minus $25 (downside floor)
+- SGC 10 Profit = SGC 10 $ minus Raw $ minus $18
+- Best Path = PSA or SGC (whichever gives higher profit on a 10)
+- Gem % = estimated % chance of PSA 10 (0-100)
+- Mult = PSA 10 $ / Raw $
+- Risk = "Low" if PSA 9 Profit > 0, "Med" if between -$10 and $0, "High" if below -$10
+- Score = 0-100 (weight: multiplier + gem rate + PSA 10 profit + PSA 9 downside — reward Low risk cards)
+
+Filters:
+- Raw $ between $${minr} and $${maxr}
+- PSA 10 $ at least $${mp10}
+- Mult above ${mm}x
+- Gem % above ${mg}%
+- Score above ${ms||50}
+${mp9line}
+
+Sort by Score descending.
+
+After the table:
+1. Best LOW RISK picks (profit on both 9 and 10)
+2. Best HIGH UPSIDE picks (big PSA 10 profit)
+3. Any cards where SGC is the better path
+
+After: "Reply 'watch [player] [parallel]' to add to your watchlist."`;
+}
+
+async function callClaude(prompt) {
+  if (!apiKey) { alert('Paste your Anthropic API key in the banner at the top.'); throw new Error('No API key'); }
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-iab':'true'},
+    body: JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:3000,messages:[{role:'user',content:prompt}]})
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.error?.message||`API error ${resp.status}`);
+  return data.content.map(b=>b.text||'').join('');
+}
+
+function parseTableToCards(text) {
+  const lines = text.split('\n').filter(l => l.trim().startsWith('|') && !l.includes('---'));
+  const cards = [];
+  const header = lines[0];
+  const isHotlist = header.toLowerCase().includes('sport');
+  for (let i=1; i<lines.length; i++) {
+    const cells = lines[i].split('|').map(c=>c.trim()).filter(Boolean);
+    if (cells.length < 10) continue;
+    try {
+      const p = (s) => parseFloat(s.replace(/[$,x%]/g,''))||0;
+      let offset = isHotlist ? 1 : 0;
+      const name   = cells[1];
+      const set    = cells[2];
+      const sport  = isHotlist ? cells[3] : '';
+      const raw    = p(cells[3+offset]);
+      const psa10  = p(cells[4+offset]);
+      const psa9   = p(cells[5+offset]);
+      const sgc10  = p(cells[6+offset]);
+      const gem    = p(cells[11+offset]);
+      const vol    = 5;
+      const sc     = calcScore(raw,psa10,psa9,sgc10,gem,vol);
+      cards.push({id:`${name}-${set}`.replace(/\s+/g,'-').toLowerCase(), name, set, sport, raw, psa10, psa9, sgc10, gem, score:sc});
+    } catch(e){}
+  }
+  return cards;
+}
+
+function renderDiscovery(all) {
+  const filt = {
+    minr:parseFloat(document.getElementById('d_minr').value)||0,
+    maxr:parseFloat(document.getElementById('d_maxr').value)||999,
+    mp10:parseFloat(document.getElementById('d_mp10').value)||0,
+    mp9: parseFloat(document.getElementById('d_mp9').value)||0,
+    mm:  parseFloat(document.getElementById('d_mm').value)||0,
+    mg:  parseFloat(document.getElementById('d_mg').value)||0,
+    ms:  parseFloat(document.getElementById('d_ms').value)||0,
+  };
+  const filtered = all.filter(c =>
+    c.raw>=filt.minr && c.raw<=filt.maxr &&
+    c.psa10>=filt.mp10 && (filt.mp9===0||c.psa9>=filt.mp9) &&
+    (c.psa10/c.raw)>=filt.mm && c.gem>=filt.mg && c.score>=filt.ms
+  ).sort((a,b) => dSort.asc ? a[dSort.col]-b[dSort.col] : b[dSort.col]-a[dSort.col]);
+
+  const lowRisk = filtered.filter(c => (c.psa9-c.raw-GRAD_PSA)>=0).length;
+  document.getElementById('d_sTotal').textContent = all.length;
+  document.getElementById('d_sPass').textContent = filtered.length;
+  document.getElementById('d_sLow').textContent = lowRisk;
+  document.getElementById('d_sTop').textContent = all.length ? Math.max(...all.map(c=>c.score)) : '-';
+  document.getElementById('d_summary').style.display = 'grid';
+
+  if (!filtered.length) { document.getElementById('d_results').innerHTML='<div class="empty">No cards match your filters. Try loosening them.</div>'; return; }
+  document.getElementById('d_results').innerHTML = buildResultsTable(filtered, 'd');
+}
+
+function renderHotlist(all) {
+  const filt = {
+    minr:parseFloat(document.getElementById('h_minr').value)||0,
+    maxr:parseFloat(document.getElementById('h_maxr').value)||999,
+    mp10:parseFloat(document.getElementById('h_mp10').value)||0,
+    mp9: parseFloat(document.getElementById('h_mp9').value)||0,
+    mm:  parseFloat(document.getElementById('h_mm').value)||0,
+    mg:  parseFloat(document.getElementById('h_mg').value)||0,
+  };
+  const filtered = all.filter(c =>
+    c.raw>=filt.minr && c.raw<=filt.maxr &&
+    c.psa10>=filt.mp10 && (filt.mp9===0||c.psa9>=filt.mp9) &&
+    (c.psa10/c.raw)>=filt.mm && c.gem>=filt.mg
+  ).sort((a,b) => hSort.asc ? a[hSort.col]-b[hSort.col] : b[hSort.col]-a[hSort.col]);
+  if (!filtered.length) { document.getElementById('h_results').innerHTML='<div class="empty">No cards match filters.</div>'; return; }
+  document.getElementById('h_results').innerHTML = buildResultsTable(filtered, 'h');
+}
+
+function buildResultsTable(cards, prefix) {
+  const isH = prefix==='h';
+  const sort = isH ? hSort : dSort;
+  const th = (col,label) => `<th onclick="${prefix}SortBy('${col}')">${label}${sort.col===col?(sort.asc?' ↑':' ↓'):''}</th>`;
+  const rows = cards.map(c => {
+    const p10p = Math.round(c.psa10-c.raw-GRAD_PSA);
+    const p9p  = Math.round(c.psa9-c.raw-GRAD_PSA);
+    const sgcp = c.sgc10 ? Math.round(c.sgc10-c.raw-GRAD_SGC) : null;
+    const bestPath = (sgcp!==null&&sgcp>p10p)?'SGC':'PSA';
+    const inW = watchlist.find(w=>w.id===c.id);
+    const wb = inW
+      ? `<button style="font-size:11px;padding:2px 6px;border-radius:4px;border:1px solid var(--teal);color:var(--teal-text);background:none;cursor:default" disabled>Watching</button>`
+      : `<button class="rb" onclick="addWatchFrom('${prefix}','${c.id}')">+ Watch</button>`;
+    return `<tr>
+      <td><strong>${c.name}</strong><br><span style="font-size:11px;color:var(--text2)">${c.set}</span>${c.sport?`<br><span style="font-size:10px;color:var(--text3)">${c.sport}</span>`:''}</td>
+      <td>$${c.raw.toFixed(0)}</td>
+      <td style="font-weight:600">$${c.psa10.toFixed(0)}</td>
+      <td>$${c.psa9.toFixed(0)}</td>
+      <td>${c.sgc10?'$'+c.sgc10.toFixed(0):'—'}</td>
+      <td><span class="${profitClass(p10p)}">${p10p>=0?'+':''}$${p10p}</span></td>
+      <td><span class="${profitClass(p9p)}">${p9p>=0?'+':''}$${p9p}</span></td>
+      <td>${sgcp!==null?`<span class="${profitClass(sgcp)}">${sgcp>=0?'+':''}$${sgcp}</span>`:'—'}</td>
+      <td><span style="font-size:11px;font-weight:600;color:${bestPath==='SGC'?'var(--blue-text)':'var(--text2)'}">${bestPath}</span></td>
+      <td>${c.gem}%</td>
+      <td>${(c.psa10/c.raw).toFixed(1)}x</td>
+      <td><span class="risk ${riskClass(p9p)}">${riskLabel(p9p)}</span></td>
+      <td><span class="pill ${pClass(c.score)}">${c.score}</span></td>
+      <td style="display:flex;gap:3px;flex-wrap:wrap;min-width:120px">
+        <a class="lnk" href="${ebay(c.name+' '+c.set,null,null)}" target="_blank">Raw</a>
+        <a class="lnk" href="${ebay(c.name+' '+c.set,10,'PSA')}" target="_blank">PSA10</a>
+        <a class="lnk" href="${ebay(c.name+' '+c.set,9,'PSA')}" target="_blank">PSA9</a>
+        <a class="lnk" href="${ebay(c.name+' '+c.set,10,'SGC')}" target="_blank">SGC10</a>
+        <a class="lnk" href="${grURL(c.name)}" target="_blank">GR</a>
+        ${wb}
+      </td>
+    </tr>`;
+  }).join('');
+  return `<div class="tbl-wrap"><table>
+    <thead><tr>
+      <th style="min-width:160px">Card</th>
+      ${th('raw','Raw $')}${th('psa10','PSA 10 $')}${th('psa9','PSA 9 $')}<th>SGC 10 $</th>
+      ${th('p10p','10 Profit')}${th('p9p','9 Profit')}<th>SGC Profit</th><th>Best Path</th>
+      ${th('gem','Gem %')}${th('mult','Mult')}${th('risk','Risk')}<th>Score</th><th>Links</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+function dSortBy(col) { if(dSort.col===col)dSort.asc=!dSort.asc;else{dSort.col=col;dSort.asc=false;} renderDiscovery(discoverResults); }
+function hSortBy(col) { if(hSort.col===col)hSort.asc=!hSort.asc;else{hSort.col=col;hSort.asc=false;} renderHotlist(hotlistResults); }
+
+function addWatchFrom(prefix, id) {
+  const src = prefix==='d' ? discoverResults : hotlistResults;
+  const c = src.find(x=>x.id===id);
+  if (c && !watchlist.find(w=>w.id===c.id)) {
+    watchlist.push({...c, myRaw:null, myP10:null, verifiedAt:null});
+    saveWL();
+  }
+  if (prefix==='d') renderDiscovery(discoverResults); else renderHotlist(hotlistResults);
+}
+
+function saveWL() { try{localStorage.setItem('cfs_wl2',JSON.stringify(watchlist));}catch(e){} document.getElementById('wCount').textContent=watchlist.length; }
+function removeWatch(i) { watchlist.splice(i,1); saveWL(); renderWatchlist(); }
+function markVerified(i) { watchlist[i].verifiedAt=new Date().toISOString(); saveWL(); renderWatchlist(); }
+function updateP(i,field,val) { const n=parseFloat(val); watchlist[i][field]=(!isNaN(n)&&n>0)?n:null; saveWL(); }
+function clearWatchlist() { if(!confirm('Clear all watchlist cards?'))return; watchlist=[]; saveWL(); renderWatchlist(); }
+
+function renderWatchlist() {
+  document.getElementById('wCount').textContent=watchlist.length;
+  if (!watchlist.length){document.getElementById('wl_empty').style.display='block';document.getElementById('wl_table').style.display='none';return;}
+  document.getElementById('wl_empty').style.display='none';document.getElementById('wl_table').style.display='block';
+  const needsV=watchlist.filter(c=>!c.verifiedAt||vClass(c.verifiedAt)==='stale');
+  const ok=watchlist.filter(c=>c.verifiedAt&&vClass(c.verifiedAt)!=='stale');
+  const hrow=`<div class="wl-row wl-head"><span>Card</span><span>AI raw</span><span>My raw</span><span>PSA 10 ↑</span><span>PSA 9 ↓</span><span>SGC 10</span><span>Verified</span></div>`;
+  let html='';
+  if(needsV.length){html+=`<div class="shead">⚠ Needs verification (${needsV.length})</div>${hrow}`;needsV.forEach(c=>{html+=wlRow(c,watchlist.indexOf(c));});}
+  if(ok.length){html+=`<div class="shead">✓ Recently verified (${ok.length})</div>${hrow}`;ok.forEach(c=>{html+=wlRow(c,watchlist.indexOf(c));});}
+  document.getElementById('wl_body').innerHTML=html;
+}
+
+function wlRow(c,i) {
+  const r=c.myRaw!=null?c.myRaw:c.raw;
+  const p10p=Math.round(c.psa10-r-GRAD_PSA);
+  const p9p =Math.round(c.psa9-r-GRAD_PSA);
+  const sgcp=c.sgc10?Math.round(c.sgc10-r-GRAD_SGC):null;
+  const vc=vClass(c.verifiedAt);
+  const sgcBetter=sgcp!==null&&sgcp>p10p;
+  return `<div class="wl-row">
+    <span>
+      <strong>${c.name}</strong><br>
+      <span style="font-size:11px;color:var(--text2)">${c.set}</span><br>
+      <span class="risk ${riskClass(p9p)}">${riskLabel(p9p)}</span>
+      ${sgcBetter?'<span class="sgc-better" style="margin-left:4px">★ SGC better</span>':''}<br>
+      <div style="margin-top:4px;display:flex;gap:3px;flex-wrap:wrap">
+        <a class="lnk" href="${ebay(c.name+' '+c.set,null,null)}" target="_blank">Raw</a>
+        <a class="lnk" href="${ebay(c.name+' '+c.set,10,'PSA')}" target="_blank">PSA10</a>
+        <a class="lnk" href="${ebay(c.name+' '+c.set,9,'PSA')}" target="_blank">PSA9</a>
+        <a class="lnk" href="${ebay(c.name+' '+c.set,10,'SGC')}" target="_blank">SGC10</a>
+        <button class="vbtn" onclick="markVerified(${i})">Verify ✓</button>
+        <button class="rb" onclick="removeWatch(${i})" style="color:var(--red-text)">✕ Remove</button>
+      </div>
+    </span>
+    <span style="font-size:12px;color:var(--text2)">$${c.raw}</span>
+    <span><input class="ep" type="number" placeholder="${c.raw}" value="${c.myRaw!=null?c.myRaw:''}" onchange="updateP(${i},'myRaw',this.value)" /></span>
+    <span>
+      <span style="font-size:13px;font-weight:700">$${c.psa10}</span><br>
+      <span class="${profitClass(p10p)}">${p10p>=0?'+':''}$${p10p}</span>
+    </span>
+    <span>
+      <span style="font-size:13px;font-weight:700">$${c.psa9}</span><br>
+      <span class="${profitClass(p9p)}">${p9p>=0?'+':''}$${p9p}</span>
+    </span>
+    <span>
+      ${c.sgc10?`<span style="font-size:13px;font-weight:700">$${c.sgc10}</span><br><span class="${profitClass(sgcp!)}">${(sgcp||0)>=0?'+':''}$${sgcp}</span>`:'<span style="font-size:11px;color:var(--text3)">—</span>'}
+    </span>
+    <span><span class="${vc}">${vLabel(c.verifiedAt)}</span></span>
+  </div>`;
+}
+
+async function scanSet() {
+  const setName = document.getElementById('setInput').value.trim();
+  if (!setName) { document.getElementById('setInput').focus(); return; }
+  document.getElementById('d_err').style.display='none';
+  document.getElementById('d_summary').style.display='none';
+  document.getElementById('d_results').innerHTML='<div class="loading">Scanning set — analyzing flip candidates</div>';
+  try {
+    const text = await callClaude(buildPrompt(
+      setName,
+      document.getElementById('d_minr').value||0,
+      document.getElementById('d_maxr').value||40,
+      document.getElementById('d_mp10').value||40,
+      document.getElementById('d_mp9').value||0,
+      document.getElementById('d_mm').value||3,
+      document.getElementById('d_mg').value||30,
+      document.getElementById('d_ms').value||50,
+      null, false
+    ));
+    discoverResults = parseTableToCards(text);
+    dSort={col:'score',asc:false};
+    renderDiscovery(discoverResults);
+    // Show full text analysis below table
+    const analysis = text.split('\n').filter(l=>!l.startsWith('|')&&l.trim()).slice(-20).join('\n');
+  } catch(err) {
+    document.getElementById('d_err').textContent='Error: '+err.message;
+    document.getElementById('d_err').style.display='block';
+    document.getElementById('d_results').innerHTML='<div class="empty">Something went wrong. Check your API key and try again.</div>';
+  }
+}
+
+async function genHotlist() {
+  document.getElementById('h_err').style.display='none';
+  document.getElementById('h_results').innerHTML='<div class="loading">Generating hotlist</div>';
+  const sf = hotSport==='All'?'Football, Baseball, Basketball, Hockey, Soccer, and Pokemon':hotSport;
+  try {
+    const text = await callClaude(buildPrompt(
+      null,
+      document.getElementById('h_minr').value||0,
+      document.getElementById('h_maxr').value||40,
+      document.getElementById('h_mp10').value||40,
+      document.getElementById('h_mp9').value||0,
+      document.getElementById('h_mm').value||3,
+      document.getElementById('h_mg').value||30,
+      null, sf, true
+    ));
+    hotlistResults = parseTableToCards(text);
+    hSort={col:'score',asc:false};
+    renderHotlist(hotlistResults);
+  } catch(err) {
+    document.getElementById('h_err').textContent='Error: '+err.message;
+    document.getElementById('h_err').style.display='block';
+    document.getElementById('h_results').innerHTML='<div class="empty">Something went wrong. Check your API key and try again.</div>';
+  }
+}
+
+['d_minr','d_maxr','d_mp10','d_mp9','d_mm','d_mg','d_ms'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',()=>{if(discoverResults.length)renderDiscovery(discoverResults);});
+});
+['h_minr','h_maxr','h_mp10','h_mp9','h_mm','h_mg'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',()=>{if(hotlistResults.length)renderHotlist(hotlistResults);});
+});
+document.getElementById('setInput').addEventListener('keydown',e=>{if(e.key==='Enter')scanSet();});
+document.getElementById('wCount').textContent=watchlist.length;
+</script>
+</body>
+</html>
